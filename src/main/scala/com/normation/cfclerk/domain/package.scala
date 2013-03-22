@@ -38,5 +38,7 @@ import com.normation.eventlog.EventActor
 package object domain {
 
   val CfclerkEventActor = EventActor("CFClerk")
+  
+  val PARAMETER_VARIABLE = "RUDDER_PARAMETERS_VARIABLE"
 
 }

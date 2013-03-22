@@ -38,13 +38,33 @@ import scala.collection.mutable.{ Map => MutMap }
 import net.liftweb.common._
 
 /**
+ * A Parameter Entry has a Name and a Value, and can be freely used within the promises
+ * We need the get methods for StringTemplate, since it needs 
+ * get methods, and @Bean doesn't seem to do the trick
+ */
+case class ParameterEntry(
+    parameterName : String,
+    parameterValue: String
+) {
+  def getParameterName() : String = {
+    parameterName
+  }
+  
+  def getParameterValue() : String = {
+    parameterValue
+  }
+}
+
+/**
  * Container for policy instances and the path where we want to write them
  * We put directives in them, as well as an outPath (relative to the base path)
  *
  * @author Nicolas CHARLES
  *
  */
-class Cf3PolicyDraftContainer(val outPath: String) extends Loggable {
+class Cf3PolicyDraftContainer(
+    val outPath    : String
+  , val parameters : Set[ParameterEntry]) extends Loggable {
 
   protected val cf3PolicyDrafts = MutMap[Cf3PolicyDraftId, Cf3PolicyDraft]() /* the target policies (the one we wish to have) */
 
@@ -145,7 +165,7 @@ class Cf3PolicyDraftContainer(val outPath: String) extends Loggable {
   }
 
   override def clone(): Cf3PolicyDraftContainer = {
-    val copy = new Cf3PolicyDraftContainer(outPath)
+    val copy = new Cf3PolicyDraftContainer(outPath, parameters)
     copy.cf3PolicyDrafts ++= cf3PolicyDrafts.map(x => (x._1, x._2.clone))
     copy
   }
