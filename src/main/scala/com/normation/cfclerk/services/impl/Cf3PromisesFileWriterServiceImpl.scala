@@ -90,17 +90,12 @@ class Cf3PromisesFileWriterServiceImpl(
 
     val variablesByTechnique = prepareVariables(container, systemVars ++ extraSystemVariables, techniquesRudder)
 
-    val rudderTemplates = techniquesRudder.map {technique =>
+    techniquesRudder.map {technique =>
       (
           technique.id
         , PreparedTemplates(tmlsByTechnique(technique.id), variablesByTechnique(technique.id) :+ rudderParametersVariable )
       )
     }.toMap
-    
-    
-    val csv = prepareReportingDataForNCF(container)
-    
-    rudderTemplates
   }
 
 
@@ -158,6 +153,7 @@ class Cf3PromisesFileWriterServiceImpl(
       fileSet    : Set[Cf3PromisesFileTemplateCopyInfo]
     , variableSet: Seq[STVariable]
     , outPath    : String
+    , csvFile    : Seq[String]
   ): Unit = {
     try {
       val generationVariable = getGenerationVariable()
@@ -201,6 +197,17 @@ class Cf3PromisesFileWriterServiceImpl(
         }
       }
 
+      // Writing csv file
+      val csvContent = csvFile.mkString("\n")
+      val CSVFILENAME = "reports.csv"
+      try {
+        FileUtils.writeStringToFile(new File(outPath, CSVFILENAME), csvContent)
+      } catch {
+        case e : Exception =>
+        val message = "Impossible to write CSV file (file: %s) cause is: %s".format(CSVFILENAME, e.getMessage)
+        throw new RuntimeException(message,e)
+      }
+        
     } catch {
       case ex: IOException => logger.error("Writing promises error : ", ex); throw new IOException("Could not create new promises", ex)
       case ex: NullPointerException => logger.error("Writing promises error : ", ex); throw new IOException("Could not create new promises", ex)
