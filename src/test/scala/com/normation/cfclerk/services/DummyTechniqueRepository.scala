@@ -77,7 +77,7 @@ class DummyTechniqueRepository(policies: Seq[Technique] = Seq()) extends Techniq
   }
   
   def getTR(techniqueId: TechniqueId): Option[TechniqueRudder] = {
-    policyMap.get(techniqueId).map{ case x:TechniqueRudder => x}
+    policyMap.get(techniqueId).collect{ case x:TechniqueRudder => x}
   }
 
   def getByIds(policiesName: Seq[TechniqueId]): Seq[Technique] = {
@@ -85,7 +85,7 @@ class DummyTechniqueRepository(policies: Seq[Technique] = Seq()) extends Techniq
   }
   
   def getTRByIds(policiesName: Seq[TechniqueId]): Seq[TechniqueRudder] = {
-    policiesName.map(x => policyMap(x)).map{ case x:TechniqueRudder => x}
+    policiesName.map(x => policyMap(x)).collect{ case x:TechniqueRudder => x}
   }
   
   def getLastTechniqueByName(policyName: TechniqueName): Option[Technique] = {

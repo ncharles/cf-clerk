@@ -73,23 +73,34 @@ class Cf3PromisesFileWriterServiceImpl(
     
     val rudderParametersVariable = getParametersVariable(container)
 
-    val techniques = techniqueRepository.getTRByIds(container.getAllIds)
 
-    val tmlsByTechnique : Map[TechniqueId,Set[Cf3PromisesFileTemplateCopyInfo]] = techniques.map{ case (technique:TechniqueRudder) =>
+    val techniques = techniqueRepository.getByIds(container.getAllIds)
+    
+    val techniquesRudder = techniques.collect { case x : TechniqueRudder => x}
+    val techniquesNCF    = techniques.collect { case x : TechniqueNCF => x }
+    
+    // This is the original Rudder part    
+
+    val tmlsByTechnique : Map[TechniqueId,Set[Cf3PromisesFileTemplateCopyInfo]] = techniquesRudder.map{ technique =>
       (
           technique.id
         , technique.templates.map(tml => Cf3PromisesFileTemplateCopyInfo(tml.id, tml.outPath)).toSet
       )
     }.toMap
 
-    val variablesByTechnique = prepareVariables(container, systemVars ++ extraSystemVariables, techniques)
+    val variablesByTechnique = prepareVariables(container, systemVars ++ extraSystemVariables, techniquesRudder)
 
-    techniques.map {technique =>
+    val rudderTemplates = techniquesRudder.map {technique =>
       (
           technique.id
         , PreparedTemplates(tmlsByTechnique(technique.id), variablesByTechnique(technique.id) :+ rudderParametersVariable )
       )
     }.toMap
+    
+    
+    val csv = prepareReportingDataForNCF(container)
+    
+    rudderTemplates
   }
 
 
@@ -274,7 +285,7 @@ class Cf3PromisesFileWriterServiceImpl(
     val techniques =  techniqueRepository.getByIds(container.getAllIds).sortWith((x,y) => x.isSystem)
 
     for {
-      tml <- techniques.flatMap { case p: TechniqueRudder => p.templates }
+      tml <- techniques.collect { case p: TechniqueRudder => p.templates }.flatten
     } {
 //      files += Cf3PromisesFileTemplateCopyInfo(tml.name, tml.outPath)
       if (tml.included) inputs += tml.outPath
@@ -372,16 +383,9 @@ class Cf3PromisesFileWriterServiceImpl(
    * Concatenate all the variables for each policy Instances.
    *
    * The serialization is done
+   * Do it only for Rudder Technique, not the NCF Technique
    */
   override def prepareAllCf3PolicyDraftVariables(cf3PolicyDraftContainer: Cf3PolicyDraftContainer): Map[TechniqueId, Map[String, Variable]] = {
-      /**
-       * Create the value of the policyinstancevariable from the Id of the Cf3PolicyDraft and
-       * the serial
-       */
-      def createValue(cf3PolicyDraft: Cf3PolicyDraft): String = {
-        cf3PolicyDraft.id.value + "@@" + cf3PolicyDraft.serial
-      }
-
 
     (for {
       // iterate over each policyName
@@ -390,51 +394,95 @@ class Cf3PromisesFileWriterServiceImpl(
       val technique = techniqueRepository.get(activeTechniqueId).getOrElse(
           throw new RuntimeException("Error, can not find policy with id '%s' and version ".format(activeTechniqueId.name.value) +
               "'%s' in the policy service".format(activeTechniqueId.name.value)))
-      val cf3PolicyDraftVariables = scala.collection.mutable.Map[String, Variable]()
 
-      for {
-        // over each cf3PolicyDraft for this name
-        (directiveId, cf3PolicyDraft) <- cf3PolicyDraftContainer.findById(activeTechniqueId)
-      } yield {
-        // start by setting the directiveVariable
-        val (directiveVariable, boundingVariable) = cf3PolicyDraft.getDirectiveVariable
+      technique match {
+        case tech : TechniqueRudder => 
 
-        cf3PolicyDraftVariables.get(directiveVariable.spec.name) match {
-          case None =>
-              //directiveVariable.values = scala.collection.mutable.Buffer[String]()
-              cf3PolicyDraftVariables.put(directiveVariable.spec.name, directiveVariable.copy(values = Seq()))
-          case Some(x) => // value is already there
-        }
-
-        // Only multi-instance policy may have a policyinstancevariable with high cardinal
-        val size = if (technique.isMultiInstance) { boundingVariable.values.size } else { 1 }
-        val values = Seq.fill(size)(createValue(cf3PolicyDraft))
-        val variable = cf3PolicyDraftVariables(directiveVariable.spec.name).copyWithAppendedValues(values)
-        cf3PolicyDraftVariables(directiveVariable.spec.name) = variable
-
-        // All other variables now
-        for (variable <- cf3PolicyDraft.getVariables) {
-          variable._2 match {
-            case newVar: TrackerVariable => // nothing, it's been dealt with already
-            case newVar: Variable =>
-              if ((!newVar.spec.checked) || (newVar.spec.isSystem)) {} else { // Only user defined variables should need to be agregated
-                val variable = cf3PolicyDraftVariables.get(newVar.spec.name) match {
-                  case None =>
-                    Variable.matchCopy(newVar, setMultivalued = true) //asIntance is ok here, I believe
-                  case Some(existingVariable) => // value is already there
-                    // hope it is multivalued, otherwise BAD THINGS will happen
-                    if (!existingVariable.spec.multivalued) {
-                      logger.warn("Attempt to append value into a non multivalued variable, bad things may happen")
-                    }
-                    existingVariable.copyWithAppendedValues(newVar.values)
-                }
-                cf3PolicyDraftVariables.put(newVar.spec.name, variable)
+            val cf3PolicyDraftVariables = scala.collection.mutable.Map[String, Variable]()
+      
+            for {
+              // over each cf3PolicyDraft for this name
+              (directiveId, cf3PolicyDraft) <- cf3PolicyDraftContainer.findById(activeTechniqueId)
+            } yield {
+              // start by setting the directiveVariable
+              val (directiveVariable, boundingVariable) = cf3PolicyDraft.getDirectiveVariable
+      
+              cf3PolicyDraftVariables.get(directiveVariable.spec.name) match {
+                case None =>
+                    //directiveVariable.values = scala.collection.mutable.Buffer[String]()
+                    cf3PolicyDraftVariables.put(directiveVariable.spec.name, directiveVariable.copy(values = Seq()))
+                case Some(x) => // value is already there
               }
-          }
-        }
+      
+              // Only multi-instance policy may have a policyinstancevariable with high cardinal
+              val size = if (technique.isMultiInstance) { boundingVariable.values.size } else { 1 }
+              val values = Seq.fill(size)(createRudderUUID(cf3PolicyDraft))
+              val variable = cf3PolicyDraftVariables(directiveVariable.spec.name).copyWithAppendedValues(values)
+              cf3PolicyDraftVariables(directiveVariable.spec.name) = variable
+      
+              // All other variables now
+              for (variable <- cf3PolicyDraft.getVariables) {
+                variable._2 match {
+                  case newVar: TrackerVariable => // nothing, it's been dealt with already
+                  case newVar: Variable =>
+                    if ((!newVar.spec.checked) || (newVar.spec.isSystem)) {} else { // Only user defined variables should need to be agregated
+                      val variable = cf3PolicyDraftVariables.get(newVar.spec.name) match {
+                        case None =>
+                          Variable.matchCopy(newVar, setMultivalued = true) //asIntance is ok here, I believe
+                        case Some(existingVariable) => // value is already there
+                          // hope it is multivalued, otherwise BAD THINGS will happen
+                          if (!existingVariable.spec.multivalued) {
+                            logger.warn("Attempt to append value into a non multivalued variable, bad things may happen")
+                          }
+                          existingVariable.copyWithAppendedValues(newVar.values)
+                      }
+                      cf3PolicyDraftVariables.put(newVar.spec.name, variable)
+                    }
+                }
+              }
+            }
+            Some((activeTechniqueId, cf3PolicyDraftVariables.toMap))
+        case _ => 
+            None
       }
-      (activeTechniqueId, cf3PolicyDraftVariables.toMap)
-    }).toMap
+    }).flatten.toMap
   }
 
+  
+  /**
+   * From a container, containing NCFTechnique, fetch the csv included, and add the Rudder UUID within, and return the new lines
+   */
+  def prepareReportingDataForNCF(cf3PolicyDraftContainer: Cf3PolicyDraftContainer): Seq[String] = {
+    (for {
+      // iterate over each policyName
+      activeTechniqueId <- cf3PolicyDraftContainer.getAllIds
+    } yield {
+      val technique = techniqueRepository.get(activeTechniqueId).getOrElse(
+          throw new RuntimeException("Error, can not find policy with id '%s' and version ".format(activeTechniqueId.name.value) +
+              "'%s' in the policy service".format(activeTechniqueId.name.value)))
+
+      technique match {
+        case tech : TechniqueNCF =>
+            // NCF Technique are UNIQUE, hence we can get at most ONE cf3PolicyDraft per activeTechniqueId
+            // TODO : enforce it somehow
+            cf3PolicyDraftContainer.findById(activeTechniqueId) match {
+              case seq if seq.size == 0 => Seq()
+              case seq if seq.size == 1 =>
+                val cf3PolicyDraft = seq.head._2
+                tech.csvDescription.map(x => x + ";" + createRudderUUID(cf3PolicyDraft))
+              case _ => throw new RuntimeException("There cannot be two identical NCF Technique on a same node"); 
+            }
+        case _ =>
+          Seq()
+      }
+    }).flatten
+  }
+  
+  /**
+   * Create the value of the RudderUUID from the Id of the Cf3PolicyDraft and
+   * the serial
+   */
+   private def createRudderUUID(cf3PolicyDraft: Cf3PolicyDraft): String = {
+     cf3PolicyDraft.id.value + "@@" + cf3PolicyDraft.serial
+   }
 }
