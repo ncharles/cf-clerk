@@ -42,19 +42,19 @@ import scala.collection.SortedSet
 class DummyTechniqueRepository(policies: Seq[Technique] = Seq()) extends TechniqueRepository {
 
   var returnedVariable = collection.mutable.Set[VariableSpec]()
-  val policy1 = Technique(TechniqueId(TechniqueName("policy1"), TechniqueVersion("1.0")), "policy1", "", Seq(), Seq(Bundle("one")), TrackerVariableSpec(), SectionSpec(name="root", children=Seq(InputVariableSpec("$variable1", "a variable1"))))
+  val policy1 = TechniqueRudder(TechniqueId(TechniqueName("policy1"), TechniqueVersion("1.0")), "policy1", "", Seq(), Seq(Bundle("one")), TrackerVariableSpec(), SectionSpec(name="root", children=Seq(InputVariableSpec("$variable1", "a variable1"))))
 
   val sections = SectionSpec(name="root", children=Seq(InputVariableSpec("$variable2", "a variable2", multivalued = true), InputVariableSpec("$variable22", "a variable22")))
-  val policy2 = Technique(TechniqueId(TechniqueName("policy2"), TechniqueVersion("1.0")), "policy2", "", Seq(), Seq(Bundle("two")), TrackerVariableSpec(), sections)
+  val policy2 = TechniqueRudder(TechniqueId(TechniqueName("policy2"), TechniqueVersion("1.0")), "policy2", "", Seq(), Seq(Bundle("two")), TrackerVariableSpec(), sections)
 
   val sections3 = SectionSpec(name="root", children=Seq(InputVariableSpec("$variable3", "a variable3")))
-  val policy3 = Technique(TechniqueId(TechniqueName("policy3"), TechniqueVersion("1.0")), "policy3", "", Seq(), Seq(Bundle("three")), TrackerVariableSpec(), sections3)
+  val policy3 = TechniqueRudder(TechniqueId(TechniqueName("policy3"), TechniqueVersion("1.0")), "policy3", "", Seq(), Seq(Bundle("three")), TrackerVariableSpec(), sections3)
 
   val sections4 = SectionSpec(name="root", children=Seq(InputVariableSpec("$variable4", "an variable4")))
-  val policy4 = Technique(TechniqueId(TechniqueName("policy4"), TechniqueVersion("1.0")), "policy4", "", Seq(), Seq(Bundle("four")), TrackerVariableSpec(), sections4)
+  val policy4 = TechniqueRudder(TechniqueId(TechniqueName("policy4"), TechniqueVersion("1.0")), "policy4", "", Seq(), Seq(Bundle("four")), TrackerVariableSpec(), sections4)
 
   val sectionsFoo = SectionSpec(name="root", children=Seq(InputVariableSpec("$bar", "bar")))
-  val foo = Technique(TechniqueId(TechniqueName("foo"), TechniqueVersion("1.0")), "foo", "", Seq(), Seq(Bundle("foo")), TrackerVariableSpec(), sectionsFoo)
+  val foo = TechniqueRudder(TechniqueId(TechniqueName("foo"), TechniqueVersion("1.0")), "foo", "", Seq(), Seq(Bundle("foo")), TrackerVariableSpec(), sectionsFoo)
 
   val policyMap = Map(policy1.id -> policy1,
     policy2.id -> policy2,
@@ -75,11 +75,19 @@ class DummyTechniqueRepository(policies: Seq[Technique] = Seq()) extends Techniq
   def get(policyName: TechniqueId): Option[Technique] = {
     policyMap.get(policyName)
   }
+  
+  def getTR(techniqueId: TechniqueId): Option[TechniqueRudder] = {
+    policyMap.get(techniqueId).map{ case x:TechniqueRudder => x}
+  }
 
   def getByIds(policiesName: Seq[TechniqueId]): Seq[Technique] = {
     policiesName.map(x => policyMap(x))
   }
-
+  
+  def getTRByIds(policiesName: Seq[TechniqueId]): Seq[TechniqueRudder] = {
+    policiesName.map(x => policyMap(x)).map{ case x:TechniqueRudder => x}
+  }
+  
   def getLastTechniqueByName(policyName: TechniqueName): Option[Technique] = {
     policyMap.get(TechniqueId(policyName, TechniqueVersion("1.0")))
   }

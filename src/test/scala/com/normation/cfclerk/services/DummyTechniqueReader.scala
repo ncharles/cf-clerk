@@ -44,7 +44,7 @@ import scala.collection.SortedSet
  * @author nicolas
  *
  */
-class DummyTechniqueReader(policies:Seq[Technique]=Seq(Technique(TechniqueId(TechniqueName("dummy"), TechniqueVersion("1.0")),"dummy", "DESCRIPTION",Seq(), Seq(), TrackerVariableSpec(), SectionSpec("ROOT")))) extends TechniqueReader {
+class DummyTechniqueReader(policies:Seq[Technique]=Seq(TechniqueRudder(TechniqueId(TechniqueName("dummy"), TechniqueVersion("1.0")),"dummy", "DESCRIPTION",Seq(), Seq(), TrackerVariableSpec(), SectionSpec("ROOT")))) extends TechniqueReader {
 
   def this() = this(Seq()) //Spring need that...
 

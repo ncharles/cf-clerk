@@ -54,7 +54,7 @@ class TechniqueParser(
   , systemVariableSpecService    : SystemVariableSpecService
 ) extends Loggable {
 
-  def parseXml(node: Node, id: TechniqueId): Technique = {
+  def parseXml(node: Node, id: TechniqueId): TechniqueRudder = {
     //check that node is <TECHNIQUE> and has a name attribute
     if (node.label.toUpperCase == TECHNIQUE_ROOT) {
       node.attribute(TECHNIQUE_NAME) match {
@@ -63,7 +63,7 @@ class TechniqueParser(
           val name = nameAttr.text
           val compatible = try Some(CompatibleParser.parseXml((node \ COMPAT_TAG).head)) catch { case _:Exception => None }
 
-          val technique = Technique(
+          val technique = TechniqueRudder(
               id
             , name
             , rootSection = sectionSpecParser.parseSectionsInPolicy(node, id, name)

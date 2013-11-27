@@ -73,9 +73,9 @@ class Cf3PromisesFileWriterServiceImpl(
     
     val rudderParametersVariable = getParametersVariable(container)
 
-    val techniques = techniqueRepository.getByIds(container.getAllIds)
+    val techniques = techniqueRepository.getTRByIds(container.getAllIds)
 
-    val tmlsByTechnique : Map[TechniqueId,Set[Cf3PromisesFileTemplateCopyInfo]] = techniques.map{ technique =>
+    val tmlsByTechnique : Map[TechniqueId,Set[Cf3PromisesFileTemplateCopyInfo]] = techniques.map{ case (technique:TechniqueRudder) =>
       (
           technique.id
         , technique.templates.map(tml => Cf3PromisesFileTemplateCopyInfo(tml.id, tml.outPath)).toSet
@@ -213,7 +213,7 @@ class Cf3PromisesFileWriterServiceImpl(
   private[this] def prepareVariables(
       container: Cf3PolicyDraftContainer
     , systemVars: Map[String, Variable]
-    , techniques: Seq[Technique]
+    , techniques: Seq[TechniqueRudder]
   ) : Map[TechniqueId,Seq[STVariable]] = {
 
     logger.debug("Preparing the PI variables for container %s".format(container.outPath))
@@ -271,10 +271,10 @@ class Cf3PromisesFileWriterServiceImpl(
     val inputs = scala.collection.mutable.Buffer[String]() // all the include file
 
     // Fetch the policies configured, with the system policies first
-    val policies =  techniqueRepository.getByIds(container.getAllIds).sortWith((x,y) => x.isSystem)
+    val techniques =  techniqueRepository.getByIds(container.getAllIds).sortWith((x,y) => x.isSystem)
 
     for {
-      tml <- policies.flatMap(p => p.templates)
+      tml <- techniques.flatMap { case p: TechniqueRudder => p.templates }
     } {
 //      files += Cf3PromisesFileTemplateCopyInfo(tml.name, tml.outPath)
       if (tml.included) inputs += tml.outPath
@@ -287,7 +287,7 @@ class Cf3PromisesFileWriterServiceImpl(
           (variable.spec.name, variable)
         }
       , {
-          val bundleSet = policies.flatMap(x => x.bundlesequence.map(x =>x.name))
+          val bundleSet = techniques.flatMap(x => x.bundlesequence.map(x =>x.name))
           val variable = SystemVariable(systemVariableSpecService.get("BUNDLELIST"), Seq(bundleSet.mkString(", \"", "\",\"", "\"")))
 
 //          if(value.length == 0) variable.saveValue(value)

@@ -90,6 +90,7 @@ sealed trait SectionChildSpec {
 
 /**
  * Metadata about a section object.
+ * Section can have values (optionnal)
  */
 case class SectionSpec(
     name            : String
@@ -99,6 +100,7 @@ case class SectionSpec(
   , displayPriority : DisplayPriority = HighDisplayPriority
   , description     : String = ""
   , children        : Seq[SectionChildSpec] = Seq()
+  , values          : Option[Seq[Variable]] = None
 ) extends SectionChildSpec with HashcodeCaching {
 
   lazy val getDirectVariables : Seq[VariableSpec] = {

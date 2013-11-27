@@ -66,6 +66,18 @@ case class TechniqueId(name: TechniqueName, version: TechniqueVersion) extends O
   }
 }
 
+trait Technique {
+  def id             : TechniqueId
+  def name           : String
+  def description    : String
+  def bundlesequence : Seq[Bundle]
+  def rootSection    : SectionSpec
+  def compatible     : Option[Compatible]
+  def isMultiInstance: Boolean
+  def isSystem       : Boolean
+  def longDescription: String
+}
+
 /**
  * A Policy is made of a name, a description, and the list of templates name relevant
  * The templates are found thanks to the Descriptor file which holds all the relevant
@@ -74,7 +86,7 @@ case class TechniqueId(name: TechniqueName, version: TechniqueVersion) extends O
  * @author Nicolas Charles
  *
  */
-case class Technique(
+case class TechniqueRudder(
     id                  : TechniqueId
   , name                : String
   , description         : String
@@ -88,7 +100,7 @@ case class Technique(
   , longDescription     : String = ""
   , isSystem            : Boolean = false
 
-) extends HashcodeCaching {
+) extends Technique with HashcodeCaching {
 
   require(null != id && nonEmpty(id.name.value), "ID is required in policy")
   require(nonEmpty(name), "Name is required in policy")
@@ -107,6 +119,33 @@ case class Technique(
   }
 
   val getAllVariableSpecs = this.rootSection.getAllVariables ++ this.systemVariableSpecs :+ this.trackerVariableSpec
+}
+
+case class TechniqueNCF(
+    id                  : TechniqueId
+  , name                : String
+  , description         : String
+  , bundlesequence      : Seq[Bundle]
+  , rootSection         : SectionSpec //be careful to not split it from the TechniqueId, else you will not have the good spec for the version
+  , compatible          : Option[Compatible] = None
+  , isMultiInstance     : Boolean = false // true if we can have several instance of this policy
+  , longDescription     : String = ""
+  , isSystem            : Boolean = false
+  , csvDescription      : Seq[String]
+
+) extends Technique with HashcodeCaching {
+
+  require(null != id && nonEmpty(id.name.value), "ID is required in policy")
+  require(nonEmpty(name), "Name is required in policy")
+
+  require(isMultiInstance == false, "NCF Technique can not be multi instance")
+
+  def toLongString: String = {
+    "## %s [%s-%s] ## \n  -> unique:%-5s \n  -> %s\n  -> NCF template: %s".format(
+      name, id.name.value, id.version.toString,
+      if (isMultiInstance) "false" else "true",
+      description)
+  }
 }
 
 /**

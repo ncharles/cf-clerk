@@ -78,6 +78,13 @@ trait TechniqueRepository {
   def get(techniqueId: TechniqueId): Option[Technique]
 
   /**
+   * Return a TechniqueRudder by its id
+   * @param techniqueId
+   * @return
+   */
+  def getTR(techniqueId: TechniqueId): Option[TechniqueRudder]
+
+  /**
    * Return a policy found by its name.
    * If several versions of that policy are available,
    * the most recent version is used
@@ -91,6 +98,14 @@ trait TechniqueRepository {
    */
   def getByIds(techniqueIds: Seq[TechniqueId]): Seq[Technique]
 
+  /**
+   * Retrieve the list of Technique Rudder corresponding to the ids
+   * @param techniqueIds : identifiers of the policies
+   * @return : the list of Technique Rudder objects
+   * Throws an error if one policy ID does not match any known policy
+   */
+  def getTRByIds(techniqueIds: Seq[TechniqueId]): Seq[TechniqueRudder]
+  
   /**
    * For the given TechniqueName, retrieve all available
    * versions.

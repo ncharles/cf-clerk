@@ -467,7 +467,7 @@ class GitTechniqueReader(
       }
   }
 
-  private[this] val dummyTechnique = Technique(
+  private[this] val dummyTechnique = TechniqueRudder(
       TechniqueId(TechniqueName("dummy"),TechniqueVersion("1.0"))
     , "dummy", "dummy", Seq(), Seq(), TrackerVariableSpec(), SectionSpec("ROOT"))
 

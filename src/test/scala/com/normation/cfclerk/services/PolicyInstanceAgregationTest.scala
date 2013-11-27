@@ -61,7 +61,7 @@ class DirectiveAgregationTest {
     }
   }
 
-  def newTechnique(id: TechniqueId) = Technique(id, "tech" + id, "", Seq(), Seq(), TrackerVariableSpec(), SectionSpec("plop"), Set(), None)
+  def newTechnique(id: TechniqueId) = TechniqueRudder(id, "tech" + id, "", Seq(), Seq(), TrackerVariableSpec(), SectionSpec("plop"), Set(), None)
 
   import scala.collection.immutable.Set
   val trackerVariableSpec = TrackerVariableSpec(Some("card"))
@@ -72,14 +72,14 @@ class DirectiveAgregationTest {
 
   val templateDependencies = new Cf3PromisesFileWriterServiceImpl(
     new DummyTechniqueRepository(Seq(
-        Technique(
+        TechniqueRudder(
           activeTechniqueId1,
           "name", "DESCRIPTION", Seq(), Seq(),
           trackerVariableSpec,
           SectionSpec(name="root", children=Seq()),
           isMultiInstance = true
         )
-      , Technique(
+      , TechniqueRudder(
           activeTechniqueId2,
           "name", "DESCRIPTION", Seq(), Seq(),
           trackerVariableSpec,

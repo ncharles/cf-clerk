@@ -158,6 +158,16 @@ class TechniqueRepositoryImpl(
   }
 
   /**
+   * Retrieve the list of Technique Rudder corresponding to the ids
+   * @param techniqueIds : identifiers of the policies
+   * @return : the list of Technique Rudder objects
+   * Throws an error if one policy ID does not match any known policy
+   */
+  override def getTRByIds(techniqueIds: Seq[TechniqueId]): Seq[TechniqueRudder] = {
+    techniqueIds.map(x => techniqueInfosCache.techniques(x.name)(x.version)).map{ case x: TechniqueRudder => x }
+  }
+  
+  /**
    * Return a policy by its name
    * @param policyName
    * @return
@@ -170,6 +180,18 @@ class TechniqueRepositoryImpl(
     result
   }
 
+  /**
+   * Return a policy by its name
+   * @param policyName
+   * @return
+   */
+  override def getTR(techniqueId: TechniqueId): Option[TechniqueRudder] = {
+    val result = techniqueInfosCache.techniques.get(techniqueId.name).flatMap(versions => versions.get(techniqueId.version)).map{ case x: TechniqueRudder => x }
+    if(!result.isDefined) {
+      logger.debug("Required Technique Rudder '%s' was not found".format(techniqueId))
+    }
+    result
+  }
   override def getLastTechniqueByName(policyName: TechniqueName): Option[Technique] = {
     techniqueInfosCache.techniques.get(policyName).map { versions => versions.last._2 }
   }
